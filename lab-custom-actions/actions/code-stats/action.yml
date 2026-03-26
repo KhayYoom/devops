@@ -1,0 +1,24 @@
+name: "Code Statistics"
+description: "Analyzes repository and reports code statistics"
+inputs:
+  directory:
+    description: "Directory to analyze"
+    required: false
+    default: "."
+  extensions:
+    description: "File extensions to count (comma-separated)"
+    required: false
+    default: "py,js,ts,yml,yaml"
+outputs:
+  total-files:
+    description: "Total number of files"
+  total-lines:
+    description: "Total lines of code"
+  report:
+    description: "Full statistics report"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.directory }}
+    - ${{ inputs.extensions }}

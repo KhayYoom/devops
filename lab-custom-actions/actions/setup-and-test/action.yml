@@ -1,0 +1,63 @@
+name: "Setup and Test"
+description: "Installs Python dependencies and runs tests with coverage"
+inputs:
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.12"
+  test-path:
+    description: "Path to tests directory"
+    required: false
+    default: "tests/"
+  install-command:
+    description: "Command to install dependencies"
+    required: false
+    default: "pip install -r requirements.txt"
+outputs:
+  test-result:
+    description: "Test outcome (success/failure)"
+    value: ${{ steps.run-tests.outcome }}
+  test-output:
+    description: "Test output summary"
+    value: ${{ steps.run-tests.outputs.summary }}
+runs:
+  using: "composite"
+  steps:
+    # ------------------------------------------------------------------
+    # Step 1: Setup Python
+    # ------------------------------------------------------------------
+    # Composite actions CAN use other actions with "uses:".
+    # This is a key advantage -- you can bundle multiple actions together.
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # ------------------------------------------------------------------
+    # Step 2: Install Dependencies
+    # ------------------------------------------------------------------
+    # IMPORTANT: In composite actions, you MUST specify "shell:" for
+    # every "run:" step. This is different from regular workflows where
+    # shell defaults to bash. Forgetting this causes a validation error.
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        ${{ inputs.install-command }}
+
+    # ------------------------------------------------------------------
+    # Step 3: Run Tests
+    # ------------------------------------------------------------------
+    # We capture the test output and set it as a step output.
+    # The "outcome" (success/failure) is automatically available via
+    # steps.<id>.outcome for any step.
+    - name: Run Tests
+      id: run-tests
+      shell: bash
+      run: |
+        echo "Running tests in ${{ inputs.test-path }}..."
+        python -m pytest ${{ inputs.test-path }} -v --tb=short 2>&1 | tee test-output.txt
+        RESULT=${PIPESTATUS[0]}
+        SUMMARY=$(tail -1 test-output.txt)
+        echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
+        exit $RESULT

@@ -1,0 +1,84 @@
+# =============================================================================
+#  LAB 9C: Test the Composite Action (Setup & Test)
+# =============================================================================
+#
+#  This workflow tests the Setup & Test composite action by installing
+#  Python dependencies and running pytest against the sample app.
+#
+#  KEY CONCEPTS:
+#    - Composite actions bundle multiple steps into one reusable action
+#    - They can use other actions (like actions/setup-python@v5)
+#    - Every "run:" step MUST have "shell:" specified
+#    - Outputs are defined differently (value: instead of just description)
+#
+#  TRY:
+#    - Change python-version to 3.11 and see it still works
+#    - Point test-path to a nonexistent directory and see it fail
+#
+
+name: "Lab 9C - Test Composite Action"
+
+on:
+  push:
+    paths:
+      - "03-cicd/lab-custom-actions/**"
+  workflow_dispatch:
+
+jobs:
+  test-setup-and-test:
+    name: "Test Setup & Test Action"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # Step 1: Checkout the repository
+      # ------------------------------------------------------------------
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # Step 2: Run the composite action
+      # ------------------------------------------------------------------
+      # This single step does THREE things:
+      #   1. Sets up Python 3.12
+      #   2. Installs dependencies from requirements.txt
+      #   3. Runs pytest against tests/
+      - name: Setup and Run Tests
+        id: test
+        uses: ./actions/setup-and-test
+        with:
+          python-version: "3.12"
+          test-path: "tests/"
+          install-command: "pip install -r requirements.txt"
+
+      # ------------------------------------------------------------------
+      # Step 3: Display outputs
+      # ------------------------------------------------------------------
+      - name: Show Test Results
+        run: |
+          echo "==============================="
+          echo "  Test Results"
+          echo "==============================="
+          echo ""
+          echo "Test Result: ${{ steps.test.outputs.test-result }}"
+          echo "Test Output: ${{ steps.test.outputs.test-output }}"
+
+  # Test with a different Python version to prove it's reusable
+  test-python-311:
+    name: "Test with Python 3.11"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup and Run Tests (Python 3.11)
+        id: test
+        uses: ./actions/setup-and-test
+        with:
+          python-version: "3.11"
+          test-path: "tests/"
+
+      - name: Show Results
+        run: |
+          echo "Python 3.11 test result: ${{ steps.test.outputs.test-result }}"

@@ -1,0 +1,25 @@
+name: "PR Comment Bot"
+description: "Posts a formatted comment on pull requests with build information"
+inputs:
+  message:
+    description: "The message to post"
+    required: true
+  include-build-info:
+    description: "Include build details in comment"
+    required: false
+    default: "true"
+  emoji:
+    description: "Emoji prefix (rocket, check, warning, info)"
+    required: false
+    default: "rocket"
+outputs:
+  comment-id:
+    description: "ID of the created comment"
+  comment-url:
+    description: "URL of the created comment"
+runs:
+  using: "node20"
+  main: "index.js"
+branding:
+  icon: "message-circle"
+  color: "blue"

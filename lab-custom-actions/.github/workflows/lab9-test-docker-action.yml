@@ -1,0 +1,81 @@
+# =============================================================================
+#  LAB 9B: Test the Docker Action (Code Statistics)
+# =============================================================================
+#
+#  This workflow tests the Code Statistics Docker action by scanning
+#  the repository and reporting file/line counts per extension.
+#
+#  KEY CONCEPTS:
+#    - Docker actions only run on Linux runners (ubuntu-latest)
+#    - GitHub builds the Dockerfile automatically
+#    - Inputs are passed as args to the container
+#    - Outputs are read from $GITHUB_OUTPUT inside the container
+#
+#  IMPORTANT:
+#    If you change runs-on to windows-latest or macos-latest,
+#    this workflow will FAIL -- Docker actions are Linux-only!
+#
+
+name: "Lab 9B - Test Docker Action"
+
+on:
+  push:
+    paths:
+      - "03-cicd/lab-custom-actions/**"
+  workflow_dispatch:
+
+jobs:
+  test-code-stats:
+    name: "Test Code Statistics"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # Step 1: Checkout the repository
+      # ------------------------------------------------------------------
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # Step 2: Run the Code Stats action with default settings
+      # ------------------------------------------------------------------
+      - name: Analyze Code (default extensions)
+        id: stats-default
+        uses: ./actions/code-stats
+        with:
+          directory: "."
+          extensions: "py,js,ts,yml,yaml"
+
+      # ------------------------------------------------------------------
+      # Step 3: Display the outputs
+      # ------------------------------------------------------------------
+      - name: Show Default Stats
+        run: |
+          echo "==============================="
+          echo "  Code Statistics Results"
+          echo "==============================="
+          echo ""
+          echo "Total Files: ${{ steps.stats-default.outputs.total-files }}"
+          echo "Total Lines: ${{ steps.stats-default.outputs.total-lines }}"
+          echo ""
+          echo "Full Report:"
+          echo "${{ steps.stats-default.outputs.report }}"
+
+      # ------------------------------------------------------------------
+      # Step 4: Run with custom extensions
+      # ------------------------------------------------------------------
+      - name: Analyze Code (custom extensions)
+        id: stats-custom
+        uses: ./actions/code-stats
+        with:
+          directory: "."
+          extensions: "py,yml,sh"
+
+      # ------------------------------------------------------------------
+      # Step 5: Display custom results
+      # ------------------------------------------------------------------
+      - name: Show Custom Stats
+        run: |
+          echo "Custom scan (py, yml, sh):"
+          echo "  Files: ${{ steps.stats-custom.outputs.total-files }}"
+          echo "  Lines: ${{ steps.stats-custom.outputs.total-lines }}"

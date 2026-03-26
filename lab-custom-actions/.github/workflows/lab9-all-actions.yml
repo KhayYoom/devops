@@ -1,0 +1,116 @@
+# =============================================================================
+#  LAB 9D: Combined Workflow — All Three Actions Together
+# =============================================================================
+#
+#  This workflow demonstrates using ALL three custom actions in a single
+#  pipeline. It shows how different action types (JS, Docker, Composite)
+#  can work together in a real-world workflow.
+#
+#  PIPELINE:
+#    Job 1: code-stats   (Docker action)  -- Analyze the repository
+#    Job 2: test          (Composite)      -- Run tests
+#    Job 3: comment       (JS action)      -- Post results on PR
+#
+#  Job 3 only runs on pull requests and depends on Job 2 (test) completing.
+#
+
+name: "Lab 9D - All Actions Combined"
+
+on:
+  push:
+    paths:
+      - "03-cicd/lab-custom-actions/**"
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  # ========================================================================
+  # JOB 1: Code Statistics (Docker Action)
+  # ========================================================================
+  # Runs the Docker-based code-stats action to analyze the repository.
+  # This job runs on every trigger (push, PR, manual).
+  code-stats:
+    name: "Analyze Code"
+    runs-on: ubuntu-latest
+
+    outputs:
+      total-files: ${{ steps.stats.outputs.total-files }}
+      total-lines: ${{ steps.stats.outputs.total-lines }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Code Statistics
+        id: stats
+        uses: ./actions/code-stats
+        with:
+          directory: "."
+          extensions: "py,js,yml,yaml,sh"
+
+      - name: Display Results
+        run: |
+          echo "Repository Stats:"
+          echo "  Files: ${{ steps.stats.outputs.total-files }}"
+          echo "  Lines: ${{ steps.stats.outputs.total-lines }}"
+
+  # ========================================================================
+  # JOB 2: Run Tests (Composite Action)
+  # ========================================================================
+  # Runs the composite setup-and-test action to verify the sample app.
+  test:
+    name: "Run Tests"
+    runs-on: ubuntu-latest
+
+    outputs:
+      test-result: ${{ steps.test.outputs.test-result }}
+      test-output: ${{ steps.test.outputs.test-output }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup and Test
+        id: test
+        uses: ./actions/setup-and-test
+        with:
+          python-version: "3.12"
+          test-path: "tests/"
+
+      - name: Test Summary
+        run: |
+          echo "Test result: ${{ steps.test.outputs.test-result }}"
+          echo "Test output: ${{ steps.test.outputs.test-output }}"
+
+  # ========================================================================
+  # JOB 3: PR Comment (JavaScript Action)
+  # ========================================================================
+  # Posts a comment on the PR with test results and code stats.
+  # Only runs on pull_request events and only after tests pass.
+  comment:
+    name: "Post PR Comment"
+    runs-on: ubuntu-latest
+    needs: [code-stats, test]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Action Dependencies
+        run: |
+          cd actions/pr-comment
+          npm install
+
+      - name: Post Results Comment
+        uses: ./actions/pr-comment
+        with:
+          message: "All checks passed! Files: ${{ needs.code-stats.outputs.total-files }}, Lines: ${{ needs.code-stats.outputs.total-lines }}"
+          emoji: "check"
+          include-build-info: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

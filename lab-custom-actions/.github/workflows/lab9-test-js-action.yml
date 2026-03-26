@@ -1,0 +1,89 @@
+# =============================================================================
+#  LAB 9A: Test the JavaScript Action (PR Comment Bot)
+# =============================================================================
+#
+#  This workflow tests the PR Comment Bot action by triggering it on
+#  pull requests. When a PR is opened or updated, it posts a formatted
+#  comment with build information.
+#
+#  KEY CONCEPTS:
+#    - permissions: pull-requests: write  (needed to post comments)
+#    - npm install in the action directory (needed because we skip ncc)
+#    - GITHUB_TOKEN env variable (authenticates API calls)
+#
+#  TRY IT:
+#    1. Push this to GitHub
+#    2. Create a pull request
+#    3. Watch the comment appear on the PR!
+#
+
+name: "Lab 9A - Test JS Action"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+# Required: The action needs write access to post PR comments
+permissions:
+  pull-requests: write
+
+jobs:
+  test-pr-comment:
+    name: "Test PR Comment Bot"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # Step 1: Checkout the repository
+      # ------------------------------------------------------------------
+      # We need the full repo because our action lives inside it
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # Step 2: Install action dependencies
+      # ------------------------------------------------------------------
+      # In production, you'd compile with ncc and commit dist/index.js.
+      # For this lab, we install node_modules directly so the action
+      # can find @actions/core and @actions/github at runtime.
+      - name: Install Action Dependencies
+        run: |
+          cd actions/pr-comment
+          npm install
+
+      # ------------------------------------------------------------------
+      # Step 3: Run the PR Comment Bot action
+      # ------------------------------------------------------------------
+      # Uses the local action (./actions/pr-comment) with our inputs.
+      # The GITHUB_TOKEN is passed as an env variable so the action
+      # can authenticate with the GitHub API.
+      - name: Post PR Comment
+        id: comment
+        uses: ./actions/pr-comment
+        with:
+          message: "Build completed successfully!"
+          emoji: "rocket"
+          include-build-info: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------------
+      # Step 4: Verify outputs
+      # ------------------------------------------------------------------
+      - name: Show Comment Details
+        run: |
+          echo "Comment ID: ${{ steps.comment.outputs.comment-id }}"
+          echo "Comment URL: ${{ steps.comment.outputs.comment-url }}"
+
+      # ------------------------------------------------------------------
+      # Step 5: Test with different emoji
+      # ------------------------------------------------------------------
+      - name: Post Warning Comment
+        uses: ./actions/pr-comment
+        with:
+          message: "This is a warning message"
+          emoji: "warning"
+          include-build-info: "false"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
