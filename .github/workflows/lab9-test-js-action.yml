@@ -63,7 +63,8 @@ jobs:
         uses: ./actions/pr-comment
         with:
           message: "Build completed successfully!"
-          emoji: "rocket"
+          rocket emoji: "rocket"
+          checkmark emoji: "check"
           include-build-info: "true"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,9 +82,12 @@ jobs:
       # ------------------------------------------------------------------
       - name: Post Warning Comment
         uses: ./actions/pr-comment
+
         with:
           message: "This is a warning message"
-          emoji: "warning"
+          warning triangle: "warning"
+          info circle: "info"
+
           include-build-info: "false"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
